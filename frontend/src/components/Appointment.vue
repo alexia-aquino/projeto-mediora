@@ -3,7 +3,7 @@
         <div class="appointment-card">
             <div class="appointment-header">
                 <h2>Agendar Consulta</h2>
-                <p>Preencha os dados para agendar</p>
+                <p>Preencha os campos para agendar</p>
             </div>
             <form @submit.prevent="createAppointment">
                 <div class="form-group">
