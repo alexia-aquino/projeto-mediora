@@ -182,7 +182,7 @@ export default {
             this.observacaoClima = ''
 
             try {
-                const apiKey = 'c147b0197686df66495ccc29bcee454a'
+                const apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY;
                 const lat = this.endereco.lat || -23.5505
                 const lon = this.endereco.lon || -46.6333
 
