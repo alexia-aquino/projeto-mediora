@@ -91,7 +91,7 @@ export default {
             this.error = ''
 
             try {
-                const response = await axios.post('/api/auth/login', {
+                const response = await axios.post('https://projeto-mediora.onrender.com/api/auth/login', {
                     email: this.email,
                     senha: this.password
                 })
