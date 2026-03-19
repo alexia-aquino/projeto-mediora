@@ -3,7 +3,7 @@
         <div class="appointment-card">
             <div class="appointment-header">
                 <h2>Agendar Consulta</h2>
-                <p>Preencha os dados para agendar</p>
+                <p>Preencha os campos para agendar</p>
             </div>
             <form @submit.prevent="createAppointment">
                 <div class="form-group">
@@ -182,7 +182,7 @@ export default {
             this.observacaoClima = ''
 
             try {
-                const apiKey = 'c147b0197686df66495ccc29bcee454a'
+                const apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY;
                 const lat = this.endereco.lat || -23.5505
                 const lon = this.endereco.lon || -46.6333
 
