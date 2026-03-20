@@ -78,10 +78,10 @@ Desenvolvida para uma avaliação da disciplina Desenvolvimento Backend I, no cu
 <br>
 
 <h2>Wireframes:</h2>
-<img width="455" height="2048" alt="Image" src="https://github.com/user-attachments/assets/b2304d59-15b9-49d2-b72d-db5b9d85a1dc" />
-<img width="455" height="2048" alt="Image" src="https://github.com/user-attachments/assets/77e22e1b-8425-4e8d-89a4-baade74a8f14" />
-<img width="455" height="2506" alt="Image" src="https://github.com/user-attachments/assets/02d3ef58-e19b-468d-8872-0a34ca66a166" />
-<img width="455" height="2506" alt="Image" src="https://github.com/user-attachments/assets/62bb0004-0579-4362-bcac-834cc02cf74d" />
+<img width="450" height="2048" alt="Image" src="https://github.com/user-attachments/assets/b2304d59-15b9-49d2-b72d-db5b9d85a1dc" />
+<img width="450" height="2048" alt="Image" src="https://github.com/user-attachments/assets/77e22e1b-8425-4e8d-89a4-baade74a8f14" />
+<img width="450" height="2506" alt="Image" src="https://github.com/user-attachments/assets/02d3ef58-e19b-468d-8872-0a34ca66a166" />
+<img width="450" height="2506" alt="Image" src="https://github.com/user-attachments/assets/62bb0004-0579-4362-bcac-834cc02cf74d" />
 
 <br>
 <br>
