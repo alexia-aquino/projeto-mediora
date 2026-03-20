@@ -8,7 +8,7 @@ Desenvolvida para uma avaliação da disciplina Desenvolvimento Backend I, no cu
 
 <b>🔗 Links úteis:</b>
 <ul>
-  <li> <b>Linkedin:</b> <a href="https://projeto-mediora.vercel.app/">https://projeto-mediora.vercel.app/</a></li>
+  <li> <b>Acesse o projeto:</b> <a href="https://projeto-mediora.vercel.app/">https://projeto-mediora.vercel.app/</a></li>
   <li> <b>Linkedin:</b> <a href="https://www.linkedin.com/in/alexiaaquino/">https://www.linkedin.com/in/alexiaaquino/</a></li>
 </ul>
 <br>
