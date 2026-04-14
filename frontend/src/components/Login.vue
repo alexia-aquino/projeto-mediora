@@ -1,5 +1,8 @@
 <template>
     <div class="login-container">
+
+        <LoadingSpinner :show="carregando" message="Fazendo login..." />
+
         <!-- Container principal centraliza o card de login na tela -->
         <div class="login-card">
 
@@ -36,13 +39,14 @@
                     </div>
 
                     <!-- Botão que dispara autenticação -->
-                    <button type="submit" class="btn btn-primary">
-                        Entrar
+                    <button type="submit" class="btn btn-primary" :disabled="carregando">
+                        <span v-if="carregando">Entrando...</span>
+                        <span v-else>Entrar</span>
                     </button>
                 </form>
 
                 <transition name="fade-slide">
-                    <p v-if="error" class="error-message">
+                    <p v-if="error && !carregando" class="error-message">
                         {{ error }}
                     </p>
                 </transition>
@@ -73,7 +77,8 @@ export default {
         return {
             email: '',       // email informado pelo usuário
             password: '',   // senha informada
-            error: ''      // mensagem de erro retornada pela API
+            error: '',      // mensagem de erro retornada pela API
+            carregando: false // estado de carregamento
         }
     },
 
@@ -86,6 +91,8 @@ export default {
 
         // Realiza autenticação do usuário
         async login() {
+
+            this.carregando = true
 
             // limpa erro anterior
             this.error = ''
@@ -112,10 +119,11 @@ export default {
                 } else {
                     this.error = 'Erro ao realizar login'
                 }
+            } finally {
+                this.carregando = false
             }
         }
     }
-
 }
 </script>
 

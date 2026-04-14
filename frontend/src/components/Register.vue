@@ -1,6 +1,7 @@
 <template>
 
     <div class="register-container">
+        <LoadingSpinner :show="carregando" message="Criando sua conta..." />
         <div class="register-card">
             <div class="register-header">
                 <h2>Cadastre-se</h2>
@@ -32,12 +33,13 @@
                         placeholder="Digite qualquer valor" />
                     <small class="info-text">* Campo opcional para trabalho acadêmico</small>
                 </div>
-                <button type="submit" class="btn btn-primary">
-                    Cadastrar
+                <button type="submit" class="btn btn-primary" :disabled="carregando">
+                    <span v-if="carregando">Cadastrando...</span>
+                    <span v-else>Cadastrar</span>
                 </button>
             </form>
-            <p v-if="error" class="error-message">{{ error }}</p>
-            <p v-if="success" class="success-message">{{ success }}</p>
+            <p v-if="error && !carregando" class="error-message">{{ error }}</p>
+            <p v-if="success && !carregando" class="success-message">{{ success }}</p>
             <div class="register-footer">
                 <router-link to="/">Já possui conta? Faça login</router-link>
             </div>
@@ -64,7 +66,8 @@ export default {
             tipo: 'paciente',    // tipo padrão
             id_funcionario: '',  // campo adicional para secretário
             error: '',           // mensagem de erro
-            success: ''          // mensagem de sucesso
+            success: '',         // mensagem de sucesso
+            carregando: false    // estado de carregamento
         }
     },
 
@@ -84,6 +87,7 @@ export default {
 
         // Realiza requisição de cadastro
         async register() {
+            this.carregando = true
             try {
 
                 // Envia dados para API de registro
@@ -99,16 +103,17 @@ export default {
 
                 // Feedback visual de sucesso
                 this.success = 'Cadastro realizado com sucesso!'
-                
+                this.error = ''
+
                 // Redirecionamento após pequeno delay para usuário ler mensagem
                 setTimeout(() => {
                     this.router.push('/')
                 }, 1500)
 
             } catch (error) {
-
-                // Captura erro da API ou fallback
                 this.error = error.response?.data?.msg || 'Erro no cadastro'
+            } finally {
+                this.carregando = false
             }
         }
     }

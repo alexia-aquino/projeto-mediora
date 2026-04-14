@@ -1,5 +1,6 @@
 <template>
     <div class="appointment-container">
+        <LoadingSpinner :show="carregando" :message="loadingMessage" />
         <div class="appointment-card">
             <div class="appointment-header">
                 <h2>Agendar Consulta</h2>
@@ -23,14 +24,17 @@
                 </div>
                 <div class="form-group">
                     <label for="cep">CEP</label>
-                    <input id="cep" v-model="cep" type="text" placeholder="00000-000" required @blur="buscarEndereco"
-                        maxlength="9" />
+                    <input id="cep" v-model="cepFormatado" type="text" placeholder="00000-000" @input="formatarCep"
+                        @blur="buscarEndereco" maxlength="9" />
+                    <small v-if="carregando" class="info-text">
+                        🔍 Buscando endereço...
+                    </small>
                     <small v-if="endereco" class="info-text">
                         📍 {{ endereco.logradouro }}, {{ endereco.bairro }}, {{ endereco.localidade }} - {{ endereco.uf
                         }}
                     </small>
-                    <small v-if="!endereco && cep.length === 8" class="info-text error">
-                        ❌ CEP não encontrado
+                    <small v-if="error && !carregando && cep.length === 8" class="info-text error">
+                        ❌ {{ error }}
                     </small>
                 </div>
                 <div class="form-group">
@@ -46,8 +50,9 @@
                     </small>
                 </div>
                 <div class="container-btn">
-                    <button type="submit" class="btn btn-primary">
-                        Agendar Consulta
+                    <button type="submit" class="btn btn-primary" :disabled="enviando">
+                        <span v-if="enviando">Agendando...</span>
+                        <span v-else>Agendar Consulta</span>
                     </button>
                     <div class="back-button-container">
                         <button @click="goBack" class="btn btn-back">
@@ -56,8 +61,8 @@
                     </div>
                 </div>
             </form>
-            <p v-if="error" class="error-message">{{ error }}</p>
-            <p v-if="success" class="success-message">{{ success }}</p>
+            <p v-if="error && !carregando" class="error-message">{{ error }}</p>
+            <p v-if="success && !carregando" class="success-message">{{ success }}</p>
         </div>
     </div>
 </template>
@@ -67,25 +72,25 @@ import axios from 'axios'
 
 export default {
     name: 'AppointmentView',
-
-    // Estado reativo do formulário
     data() {
         return {
             paciente: '',
             data: '',
             horario: '',
             cep: '',
+            cepFormatado: '',
             endereco: null,
             observacaoClima: '',
             observacaoClimaCarregando: false,
             dataError: '',
             error: '',
-            success: ''
+            success: '',
+            carregando: false,
+            loadingMessage: '',
+            enviando: false
         }
     },
     computed: {
-
-        // Retorna data mínima (hoje) para o campo de data
         minDate() {
             const hoje = new Date()
             const ano = hoje.getFullYear()
@@ -93,8 +98,6 @@ export default {
             const dia = String(hoje.getDate()).padStart(2, '0')
             return `${ano}-${mes}-${dia}`
         },
-
-        // Retorna data máxima (1 ano no futuro) para o campo de data
         maxDate() {
             const futuro = new Date()
             futuro.setFullYear(futuro.getFullYear() + 1)
@@ -104,185 +107,144 @@ export default {
             return `${ano}-${mes}-${dia}`
         }
     },
-    methods: {
-
-        // Retorna para dashboard
-        goBack() {
-            this.$router.push('/dashboard')
-        },
-
-        // Validação de data do agendamento
-        validarData() {
-            if (!this.data) {
-                this.dataError = 'Data é obrigatória'
-                return false
-            }
-
-            const dataSelecionada = new Date(this.data)
-            const hoje = new Date()
-            hoje.setHours(0, 0, 0, 0)
-
-            if (dataSelecionada < hoje) {
-                this.dataError = 'Não é possível agendar para datas passadas'
-                return false
-            }
-
-            const futuro = new Date()
-            futuro.setFullYear(futuro.getFullYear() + 1)
-
-            if (dataSelecionada > futuro) {
-                this.dataError = 'Não é possível agendar para mais de 1 ano no futuro'
-                return false
-            }
-
-            this.dataError = ''
-            return true
-        },
-
-        // Busca endereço via API do ViaCEP
-        async buscarEndereco() {
-            console.log('Buscando CEP:', this.cep)
-
-            const cepLimpo = this.cep.replace(/\D/g, '')
-
-            if (cepLimpo.length !== 8) {
-                this.endereco = null
-                this.error = ''
-                return
-            }
-
-            try {
-                const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`)
-                const data = await response.json()
-
-                console.log('Resposta ViaCEP:', data)
-
-                if (!data.erro) {
-                    this.endereco = data
-                    this.error = ''
-                    this.buscarClima()
-                } else {
-                    this.endereco = null
-                    this.error = 'CEP não encontrado!'
-                }
-            } catch (error) {
-                console.error('Erro ao buscar CEP:', error)
-                this.endereco = null
-                this.error = 'Erro ao buscar endereço!'
-            }
-        },
-
-        // Busca previsão do tempo via API do OpenWeatherMap
-        async buscarClima() {
-            if (!this.data || !this.endereco) {
-                return
-            }
-
-            this.observacaoClimaCarregando = true
-            this.observacaoClima = ''
-
-            try {
-                const apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY;
-                const lat = this.endereco.lat || -23.5505
-                const lon = this.endereco.lon || -46.6333
-
-                const response = await fetch(
-                    `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=pt_br`
-                )
-
-                if (!response.ok) {
-                    const errorData = await response.json()
-                    throw new Error(errorData.message || 'Erro na API do clima')
-                }
-
-                const data = await response.json()
-
-                // Encontrar previsão para o dia da consulta
-                const diaConsulta = data.list.find(item => {
-                    const dataItem = new Date(item.dt * 1000)
-                    return dataItem.toISOString().split('T')[0] === this.data
-                })
-
-                if (diaConsulta) {
-                    const condicao = diaConsulta.weather[0].main.toLowerCase()
-                    const descricao = diaConsulta.weather[0].description
-
-                    if (condicao.includes('rain') || condicao.includes('drizzle')) {
-                        this.observacaoClima = `⚠️ Previsão de ${descricao} no dia da consulta`
-                    } else if (condicao.includes('clouds')) {
-                        this.observacaoClima = `☁️ Céu nublado no dia da consulta`
-                    } else {
-                        this.observacaoClima = `☀️ Tempo bom no dia da consulta`
-                    }
-                } else {
-                    this.observacaoClima = '⚠️ Previsão indisponível para o dia'
-                }
-            } catch (error) {
-                console.error('Erro ao buscar clima:', error)
-
-                if (error.message.includes('401') || error.message.includes('invalid')) {
-                    this.observacaoClima = '⚠️ Chave de API inválida'
-                } else {
-                    this.observacaoClima = '⚠️ Erro ao verificar previsão do tempo'
-                }
-            } finally {
-                this.observacaoClimaCarregando = false
-            }
-        },
-
-        // Cria um novo agendamento
-        async createAppointment() {
-            if (!this.validarData()) {
-                return
-            }
-
-            const cepLimpo = this.cep.replace(/\D/g, '')
-            if (!cepLimpo || cepLimpo.length !== 8) {
-                this.error = 'CEP inválido'
-                return
-            }
-
-            try {
-                const token = localStorage.getItem('token')
-
-                await axios.post('https://projeto-mediora.onrender.com/api/appointments', {
-                    paciente: this.paciente,
-                    data: this.data,
-                    horario: this.horario,
-                    cep: this.cep,
-                    observacaoClima: this.observacaoClima
-                }, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                })
-
-                // Limpa formulário e exibe mensagem de sucesso
-                this.success = 'Agendamento realizado com sucesso!'
-                this.paciente = ''
-                this.data = ''
-                this.horario = ''
-                this.cep = ''
-                this.endereco = null
-                this.observacaoClima = ''
-
-                setTimeout(() => {
-                    this.$router.push('/dashboard')
-                }, 1500)
-            } catch (error) {
-                console.error('Erro ao agendar:', error)
-                this.error = error.response?.data?.msg || 'Erro ao agendar'
-            }
-        }
-    },
-
-    // Atualiza previsão automaticamente ao alterar data ou endereço
     watch: {
         data() {
             this.buscarClima()
         },
         endereco() {
             this.buscarClima()
+        }
+    },  // ← VÍRGULA CRÍTICA AQUI
+    methods: {
+        formatarCep() {
+            let cepLimpo = this.cepFormatado.replace(/\D/g, '')
+            cepLimpo = cepLimpo.substring(0, 8)
+            if (cepLimpo.length >= 5) {
+                cepLimpo = cepLimpo.substring(0, 5) + '-' + cepLimpo.substring(5)
+            }
+            this.cepFormatado = cepLimpo
+            this.cep = cepLimpo.replace(/\D/g, '')
+            console.log('Formatado:', this.cepFormatado, 'Limpo:', this.cep)
+            
+            if (this.cep.length === 8) {
+                this.buscarEndereco()
+            } else {
+                this.endereco = null
+                this.error = ''
+            }
+        },
+        goBack() {
+            this.$router.push('/dashboard')
+        },
+        validarData() {
+            if (!this.data) {
+                this.dataError = 'Data é obrigatória'
+                return false
+            }
+            const dataSelecionada = new Date(this.data)
+            const hoje = new Date()
+            hoje.setHours(0, 0, 0, 0)
+            if (dataSelecionada < hoje) {
+                this.dataError = 'Não é possível agendar para datas passadas'
+                return false
+            }
+            const futuro = new Date()
+            futuro.setFullYear(futuro.getFullYear() + 1)
+            if (dataSelecionada > futuro) {
+                this.dataError = 'Não é possível agendar para mais de 1 ano no futuro'
+                return false
+            }
+            this.dataError = ''
+            return true
+        },
+        async buscarEndereco() {
+            this.error = ''
+            this.carregando = true
+            this.loadingMessage = 'Buscando endereço...'
+            console.log('CEP para API:', this.cep)
+            if (!this.cep || this.cep.length !== 8) {
+                this.endereco = null
+                this.error = 'Digite um CEP válido (8 dígitos)'
+                this.carregando = false
+                return
+            }
+            try {
+                const response = await fetch(`https://viacep.com.br/ws/${this.cep}/json/`)
+                const data = await response.json()
+                console.log('Resposta ViaCEP:', data)
+                if (data.erro) {
+                    this.endereco = null
+                    this.error = 'CEP não encontrado!'
+                } else {
+                    this.endereco = data
+                    this.error = ''
+                    if (this.data) this.buscarClima()
+                }
+            } catch (error) {
+                console.error('Erro:', error)
+                this.endereco = null
+                this.error = 'Erro de conexão'
+            } finally {
+                this.carregando = false
+            }
+        },
+        async buscarClima() {
+            if (!this.data || !this.endereco) return
+            this.observacaoClimaCarregando = true
+            this.observacaoClima = ''
+            try {
+                const apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY
+                const lat = this.endereco.lat || -23.5505
+                const lon = this.endereco.lon || -46.6333
+                const response = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=pt_br`)
+                if (!response.ok) throw new Error('Erro API clima')
+                const data = await response.json()
+                const diaConsulta = data.list.find(item => new Date(item.dt * 1000).toISOString().split('T')[0] === this.data)
+                if (diaConsulta) {
+                    const condicao = diaConsulta.weather[0].main.toLowerCase()
+                    if (condicao.includes('rain') || condicao.includes('drizzle')) {
+                        this.observacaoClima = `⚠️ Chuva prevista`
+                    } else if (condicao.includes('clouds')) {
+                        this.observacaoClima = `☁️ Céu nublado`
+                    } else {
+                        this.observacaoClima = `☀️ Tempo bom`
+                    }
+                } else {
+                    this.observacaoClima = '⚠️ Sem previsão'
+                }
+            } catch (error) {
+                console.error('Clima erro:', error)
+                this.observacaoClima = '⚠️ Erro clima'
+            } finally {
+                this.observacaoClimaCarregando = false
+            }
+        },
+        async createAppointment() {
+            if (!this.validarData()) return
+            this.enviando = true
+            this.carregando = true
+            this.loadingMessage = 'Salvando...'
+            if (!this.cep || this.cep.length !== 8) {
+                this.error = 'CEP inválido'
+                this.carregando = this.enviando = false
+                return
+            }
+            try {
+                const token = localStorage.getItem('token')
+                await axios.post('https://projeto-mediora.onrender.com/api/appointments', {
+                    paciente: this.paciente,
+                    data: this.data,
+                    horario: this.horario,
+                    cep: this.cep,
+                    observacaoClima: this.observacaoClima
+                }, { headers: { 'Authorization': `Bearer ${token}` } })
+                this.success = 'Agendado com sucesso!'
+                setTimeout(() => this.$router.push('/dashboard'), 1500)
+            } catch (error) {
+                this.error = error.response?.data?.msg || 'Erro ao agendar'
+            } finally {
+                this.carregando = this.enviando = false
+            }
         }
     }
 }
