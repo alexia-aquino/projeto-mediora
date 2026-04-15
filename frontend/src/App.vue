@@ -6,6 +6,7 @@
           <component :is="Component" />
         </transition>
       </router-view>
+      <GlobalLoading />
     </main>
   </div>
 </template>

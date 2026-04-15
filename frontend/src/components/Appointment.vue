@@ -1,5 +1,6 @@
 <template>
     <div class="appointment-container">
+        <LoadingSpinner :show="carregando" :message="loadingMessage" />
         <div class="appointment-card">
             <div class="appointment-header">
                 <h2>Agendar Consulta</h2>
@@ -23,14 +24,14 @@
                 </div>
                 <div class="form-group">
                     <label for="cep">CEP</label>
-                    <input id="cep" v-model="cep" type="text" placeholder="00000-000" required @blur="buscarEndereco"
-                        maxlength="9" />
+                    <input id="cep" v-model="cepFormatado" type="text" placeholder="00000-000" @input="formatarCep"
+                        @blur="buscarEndereco" maxlength="9" />
                     <small v-if="endereco" class="info-text">
                         📍 {{ endereco.logradouro }}, {{ endereco.bairro }}, {{ endereco.localidade }} - {{ endereco.uf
                         }}
                     </small>
-                    <small v-if="!endereco && cep.length === 8" class="info-text error">
-                        ❌ CEP não encontrado
+                    <small v-if="error && !carregando && cep.length === 8" class="info-text error">
+                        ❌ {{ error }}
                     </small>
                 </div>
                 <div class="form-group">
@@ -46,8 +47,9 @@
                     </small>
                 </div>
                 <div class="container-btn">
-                    <button type="submit" class="btn btn-primary">
-                        Agendar Consulta
+                    <button type="submit" class="btn btn-primary" :disabled="enviando">
+                        <span v-if="enviando">Agendando...</span>
+                        <span v-else>Agendar Consulta</span>
                     </button>
                     <div class="back-button-container">
                         <button @click="goBack" class="btn btn-back">
@@ -56,8 +58,8 @@
                     </div>
                 </div>
             </form>
-            <p v-if="error" class="error-message">{{ error }}</p>
-            <p v-if="success" class="success-message">{{ success }}</p>
+            <p v-if="error && !carregando" class="error-message">{{ error }}</p>
+            <p v-if="success && !carregando" class="success-message">{{ success }}</p>
         </div>
     </div>
 </template>
@@ -80,7 +82,10 @@ export default {
             observacaoClimaCarregando: false,
             dataError: '',
             error: '',
-            success: ''
+            success: '',
+            carregando: false,
+            loadingMessage: '',
+            enviando: false
         }
     },
     computed: {
@@ -105,6 +110,26 @@ export default {
         }
     },
     methods: {
+
+        formatarCep() {
+            let cepLimpo = this.cepFormatado.replace(/\D/g, '')
+            cepLimpo = cepLimpo.substring(0, 8)
+            if (cepLimpo.length >= 5) {
+                cepLimpo = cepLimpo.substring(0, 5) + '-' + cepLimpo.substring(5)
+            }
+            this.cepFormatado = cepLimpo
+            this.cep = cepLimpo.replace(/\D/g, '')
+
+            console.log('CEP limpo:', this.cep)
+
+            // BUSCA AUTOMÁTICA quando completar 8 dígitos
+            if (this.cep.length === 8) {
+                this.buscarEndereco()
+            } else {
+                this.endereco = null
+                this.error = ''
+            }
+        },
 
         // Retorna para dashboard
         goBack() {
@@ -141,6 +166,9 @@ export default {
 
         // Busca endereço via API do ViaCEP
         async buscarEndereco() {
+            this.carregando = true
+            this.loadingMessage = 'Buscando endereço...'
+
             console.log('Buscando CEP:', this.cep)
 
             const cepLimpo = this.cep.replace(/\D/g, '')
@@ -169,6 +197,8 @@ export default {
                 console.error('Erro ao buscar CEP:', error)
                 this.endereco = null
                 this.error = 'Erro ao buscar endereço!'
+            } finally {
+                this.carregando = false;
             }
         },
 
@@ -236,11 +266,19 @@ export default {
                 return
             }
 
+            this.enviando = true;
+
             const cepLimpo = this.cep.replace(/\D/g, '')
             if (!cepLimpo || cepLimpo.length !== 8) {
                 this.error = 'CEP inválido'
                 return
             }
+
+            this.enviando = true
+            this.carregando = true
+            this.loadingMessage = 'Salvando agendamento...'
+            this.error = ''
+            this.success = ''
 
             try {
                 const token = localStorage.getItem('token')
@@ -272,6 +310,9 @@ export default {
             } catch (error) {
                 console.error('Erro ao agendar:', error)
                 this.error = error.response?.data?.msg || 'Erro ao agendar'
+            } finally {
+                this.carregando = false
+                this.enviando = false 
             }
         }
     },
