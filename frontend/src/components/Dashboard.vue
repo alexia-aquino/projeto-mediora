@@ -47,14 +47,21 @@
         </div>
 
         <!-- Card Principal -->
+        <!-- Card Principal -->
         <section class="card">
             <div class="card-header">
                 <h2>Painel de agendamentos</h2>
                 <p class="subtitle">Visualize seus agendamentos cadastrados</p>
             </div>
 
+            <!-- Estado de Carregamento -->
+            <div v-if="carregandoAgendamentos" class="loading-state">
+                <div class="loading-spinner"></div>
+                <p>Carregando agendamentos...</p>
+            </div>
+
             <!-- Estado Vazio -->
-            <div v-if="appointments.length === 0" class="empty-state">
+            <div v-else-if="appointments.length === 0" class="empty-state">
                 <p class="empty-message">Nenhum agendamento encontrado.</p>
                 <p class="empty-hint">Realize o cadastro do seu agendamento e atualize a página.</p>
             </div>
@@ -71,10 +78,11 @@
                             <th>Observação</th>
                         </tr>
                     </thead>
+
                     <tbody>
                         <tr v-for="apt in appointments" :key="apt.id">
                             <td>{{ apt.paciente }}</td>
-                            <td>{{ apt.data }}</td>
+                            <td>{{ formatDate(apt.data) }}</td>
                             <td>{{ apt.horario }}</td>
                             <td>{{ apt.cep }}</td>
                             <td>{{ apt.observacaoClima || '-' }}</td>
@@ -97,10 +105,24 @@ export default {
             appointments: [],
             userName: 'Usuário',
             userType: localStorage.getItem('userType') || 'paciente',
-            isMenuOpen: false
+            isMenuOpen: false,
+            carregandoAgendamentos: true
         }
     },
     methods: {
+
+        formatDate(dateString) {
+            if (!dateString) return '-'
+
+            const date = new Date(dateString)
+
+            const day = String(date.getDate()).padStart(2, '0')
+            const month = String(date.getMonth() + 1).padStart(2, '0') // +1 porque meses começam em 0
+            const year = date.getFullYear()
+
+            return `${day}/${month}/${year}`
+        },
+
         getFullName() {
             const userData = JSON.parse(localStorage.getItem('userData') || '{}')
             return userData.nome || 'Usuário'
@@ -124,6 +146,8 @@ export default {
             this.isMenuOpen = false
         },
         async loadAppointments() {
+            this.carregandoAgendamentos = true;
+
             try {
                 const token = localStorage.getItem('token')
                 const response = await axios.get('https://projeto-mediora.onrender.com/api/appointments', {
@@ -134,6 +158,8 @@ export default {
                 this.appointments = response.data
             } catch (error) {
                 console.error('Erro ao carregar agendamentos:', error)
+            } finally {
+                this.carregandoAgendamentos = false
             }
         },
         handleLogout() {
@@ -141,7 +167,6 @@ export default {
         }
     },
     mounted() {
-
         const userData = JSON.parse(localStorage.getItem('userData') || '{}')
 
         this.userName = this.getFirstName(userData.nome || 'Usuário')
@@ -753,6 +778,51 @@ tr:hover {
     to {
         transform: translateY(0);
         opacity: 1;
+    }
+}
+
+/* Estado de Carregamento */
+.loading-state {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+.loading-state p {
+    font-size: 1rem;
+    color: #666;
+    margin: 0;
+}
+
+/* Animação do spinner */
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsivo para loading */
+@media (max-width: 768px) {
+    .loading-state {
+        padding: 2rem 1rem;
+    }
+
+    .loading-spinner {
+        width: 32px;
+        height: 32px;
     }
 }
 </style>
